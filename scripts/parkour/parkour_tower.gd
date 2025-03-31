@@ -9,6 +9,8 @@ extends Node3D
 @export var difficulty_increase_rate: float = 0.075  # Slightly more gradual difficulty increase
 @export var tower_seed: int = 0  # Seed for randomization
 @export var add_special_platforms: bool = true  # Whether to add special platform types
+@export var moving_platforms_ratio: float = 0.2  # Increased to about 1 out of 5 platforms moving
+@export var platform_movement_distance: float = 3.5  # Increased distance that platforms can move (more dramatic movement)
 
 var rng = RandomNumberGenerator.new()
 
@@ -71,14 +73,17 @@ func generate_tower():
 		# Platform type variations to increase parkour interest
 		var platform_type = rng.randi_range(0, 10)
 		var slab_color: Color
+		var should_move = false
 		
 		# Add different platform types for variety
 		if is_checkpoint:
 			# Checkpoint platforms are gold-colored
-			slab_color = Color(0.9, 0.7, 0.2) 
+			slab_color = Color(0.9, 0.7, 0.2)
 		elif platform_type < 2 && add_special_platforms && i > 5:
-			# Moving platforms - simulated by making them red
-			slab_color = Color(0.9, 0.2, 0.2)
+			# Moving platforms - bright red colored and actually moving
+			slab_color = Color(1.0, 0.1, 0.1)
+			# Make most red platforms move (higher probability)
+			should_move = rng.randf() < 0.9 && !is_checkpoint
 		elif platform_type < 4 && add_special_platforms && i > 10:
 			# Bouncy platforms - simulated by making them blue
 			slab_color = Color(0.2, 0.2, 0.9)
@@ -90,9 +95,11 @@ func generate_tower():
 				lerp(0.2, 0.2, current_difficulty)
 			)
 		
-		# Create the slab with appropriate properties
-		var slab = create_slab(slab_size, Vector3(next_x, next_y, next_z), slab_color)
+		# Create the slab with appropriate properties - pass flag to make it move if needed
+		var slab = create_slab(slab_size, Vector3(next_x, next_y, next_z), slab_color, should_move)
 		slab.name = "Slab_" + str(i+1)
+		if should_move:
+			slab.name = "MovingSlab_" + str(i+1)
 		add_child(slab)
 		
 		# For checkpoints, add a visible marker
@@ -105,10 +112,29 @@ func generate_tower():
 	print("Parkour tower generation complete!")
 
 # Create a single slab with proper collision
-func create_slab(size: Vector3, position: Vector3, color: Color) -> StaticBody3D:
-	var slab = StaticBody3D.new()
-	slab.transform.origin = position
+func create_slab(size: Vector3, position: Vector3, color: Color, make_moving: bool = false) -> StaticBody3D:
+	var slab
 	
+	if make_moving:
+		# Create a moving platform using our custom script
+		var script = load("res://scripts/parkour/moving_platform.gd")
+		slab = StaticBody3D.new()
+		slab.set_script(script)
+		slab.transform.origin = position
+		
+		# Set random movement direction (excluding vertical movement)
+		var move_dir = get_random_movement_direction()
+		var move_distance = platform_movement_distance * (0.8 + 0.4 * rng.randf()) # Randomize slightly, but keep distance large
+		
+		# Set movement parameters - even faster speeds and shorter times for more dramatic movement
+		slab.movement_vector = move_dir * move_distance
+		slab.movement_speed = 2.0 + rng.randf() * 0.5 # Higher speed between 2.0 and 2.5
+		slab.move_time = 0.8 + rng.randf() * 0.4 # Shorter time between 0.8 and 1.2 seconds
+	else:
+		# Create a regular static platform
+		slab = StaticBody3D.new()
+		slab.transform.origin = position
+		
 	# Create collision shape
 	var collision = CollisionShape3D.new()
 	var shape = BoxShape3D.new()
@@ -135,6 +161,27 @@ func create_slab(size: Vector3, position: Vector3, color: Color) -> StaticBody3D
 	mesh_instance.set_surface_override_material(0, material)
 	slab.add_child(mesh_instance)
 	return slab
+
+# Generate a random movement direction for moving platforms (no vertical movement)
+func get_random_movement_direction() -> Vector3:
+	var direction_type = rng.randi() % 3  # Simplify to more dramatic directions
+	var direction = Vector3.ZERO
+	
+	match direction_type:
+		0: # X-axis movement (left-right)
+			direction = Vector3(1, 0, 0)
+		1: # Z-axis movement (forward-backward)
+			direction = Vector3(0, 0, 1) 
+		2: # Diagonal movement
+			direction = Vector3(0.7, 0, 0.7)
+	
+	# Random flip direction
+	if rng.randf() > 0.5:
+		direction.x *= -1
+	if rng.randf() > 0.5:
+		direction.z *= -1
+		
+	return direction.normalized()
 
 # Add a visible marker for checkpoint platforms
 func add_checkpoint_marker(parent_slab: Node3D, level: int):
