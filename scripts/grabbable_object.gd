@@ -6,6 +6,10 @@ var grab_force = 15.0  # Reduced from 20 for smoother movement
 var return_force = 10.0
 var damping_factor = 0.8  # Added damping to reduce jitter
 
+# Helper method to identify this object as grabbable for the gravity gun
+func is_grabbable():
+	return true
+
 func _physics_process(delta):
 	if is_grabbed:
 		# Calculate direction and distance to target
