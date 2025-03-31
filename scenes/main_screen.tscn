@@ -1,9 +1,10 @@
-[gd_scene load_steps=9 format=3 uid="uid://b48l8qa7u2vtd"]
+[gd_scene load_steps=11 format=3 uid="uid://b48l8qa7u2vtd"]
 
 [ext_resource type="Script" uid="uid://b7a1pupari5ia" path="res://scripts/main_screen.gd" id="1_m4n3r"]
 [ext_resource type="Script" uid="uid://bh4vrmovjmwqd" path="res://scripts/player.gd" id="2_player"]
 [ext_resource type="Script" uid="uid://cwc77lrynt8cp" path="res://scripts/gravity_gun.gd" id="3_gravity"]
 [ext_resource type="Script" uid="uid://dasa6nfqumth8" path="res://scripts/grabbable_object.gd" id="4_grabbable"]
+[ext_resource type="Script" uid="uid://f0u06qt33bok" path="res://scripts/bird.gd" id="5_bird"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_8p4vu"]
 
@@ -12,6 +13,9 @@
 [sub_resource type="BoxShape3D" id="BoxShape3D_cube"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_cube"]
+
+[sub_resource type="PrismMesh" id="PrismMesh_bird"]
+size = Vector3(0.5, 0.2, 0.3)
 
 [node name="MainScreen" type="Node3D"]
 script = ExtResource("1_m4n3r")
@@ -61,9 +65,11 @@ mass = 2.0
 script = ExtResource("4_grabbable")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="GrabbableObjects/Cube1"]
+transform = Transform3D(1, 0, 0, 0, 0.999992, -0.00397934, 0, 0.00397934, 0.999992, 0, 0, 0)
 shape = SubResource("BoxShape3D_cube")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="GrabbableObjects/Cube1"]
+transform = Transform3D(1, 0, 0, 0, 0.999992, -0.00397934, 0, 0.00397934, 0.999992, 0, 0, 0)
 mesh = SubResource("BoxMesh_cube")
 
 [node name="Cube2" type="RigidBody3D" parent="GrabbableObjects"]
@@ -87,3 +93,35 @@ shape = SubResource("BoxShape3D_cube")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="GrabbableObjects/Cube3"]
 mesh = SubResource("BoxMesh_cube")
+
+[node name="Birds" type="Node3D" parent="."]
+
+[node name="Bird1" type="Node3D" parent="Birds"]
+script = ExtResource("5_bird")
+
+[node name="BirdMesh" type="MeshInstance3D" parent="Birds/Bird1"]
+mesh = SubResource("PrismMesh_bird")
+
+[node name="Bird2" type="Node3D" parent="Birds"]
+script = ExtResource("5_bird")
+
+[node name="BirdMesh" type="MeshInstance3D" parent="Birds/Bird2"]
+mesh = SubResource("PrismMesh_bird")
+
+[node name="Bird3" type="Node3D" parent="Birds"]
+script = ExtResource("5_bird")
+
+[node name="BirdMesh" type="MeshInstance3D" parent="Birds/Bird3"]
+mesh = SubResource("PrismMesh_bird")
+
+[node name="Bird4" type="Node3D" parent="Birds"]
+script = ExtResource("5_bird")
+
+[node name="BirdMesh" type="MeshInstance3D" parent="Birds/Bird4"]
+mesh = SubResource("PrismMesh_bird")
+
+[node name="Bird5" type="Node3D" parent="Birds"]
+script = ExtResource("5_bird")
+
+[node name="BirdMesh" type="MeshInstance3D" parent="Birds/Bird5"]
+mesh = SubResource("PrismMesh_bird")
