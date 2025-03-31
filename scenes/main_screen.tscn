@@ -19,7 +19,19 @@ script = ExtResource("1_m4n3r")
 [node name="Ground" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 use_collision = true
-size = Vector3(20, 1, 20)
+size = Vector3(100, 1, 100)
+
+[node name="Mountain1" type="CSGCylinder3D" parent="Ground"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 15, -20)
+radius = 10.0
+height = 30.0
+cone = true
+
+[node name="Mountain2" type="CSGCylinder3D" parent="Ground"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 20, -30)
+radius = 15.0
+height = 40.0
+cone = true
 
 [node name="Player" type="CharacterBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
