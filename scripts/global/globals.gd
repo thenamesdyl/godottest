@@ -5,6 +5,11 @@ const SAVE_FILE_PATH = "user://save_data.json"
 const MAX_PLAYERS = 4
 const DEBUG_MODE = true
 
+# Constants for chunk system
+const CHUNK_SIZE = 50.0  # Size of each chunk in world units
+const RENDER_DISTANCE = 2  # How many chunks to render in each direction from player
+const UNLOAD_DISTANCE = 3  # How far chunks need to be to get unloaded
+
 ## Enums
 enum GameState {
 	MENU,
