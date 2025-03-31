@@ -2,23 +2,26 @@ extends StaticBody3D
 
 # Movement parameters
 @export var movement_vector: Vector3 = Vector3(2.0, 0.0, 0.0)  # Default to side movement
-@export var movement_speed: float = 1.0  # Speed of the movement
-@export var move_time: float = 2.0  # Time to complete one way (seconds)
+@export var movement_speed: float = 1.0  # Speed of the movement - controls frequency
+@export var movement_amplitude: float = 1.0  # Controls the distance moved (multiplied by movement_vector)
 @export var show_movement_trail: bool = true  # Show trail indicators
 
 # Private variables
-var _start_position: Vector3
-var _target_position: Vector3
-var _move_timer: float = 0.0
-var _moving_forward: bool = true
+var _center_position: Vector3  # Middle point of movement
+var _movement_direction: Vector3  # Normalized direction vector
+var _total_time: float = 0.0  # Tracks elapsed time for smooth sine movement
 var _trail_indicators: Array = []
 var _material: StandardMaterial3D
 
 func _ready():
-	# Store the initial position
-	_start_position = global_position
-	# Calculate the target position
-	_target_position = _start_position + movement_vector
+	# Store the center position (starting position will be the center)
+	_center_position = global_position
+	
+	# Calculate normalized movement direction
+	_movement_direction = movement_vector.normalized()
+	
+	# Randomize starting position in the cycle
+	_total_time = randf() * TAU  # Random phase between 0 and 2π
 	
 	# Store material reference if the platform has one
 	var mesh_instance = find_child("*", false) as MeshInstance3D
@@ -35,30 +38,21 @@ func _ready():
 		create_movement_trail()
 
 func _physics_process(delta):
-	# Update the timer
-	_move_timer += delta * movement_speed * (1.0 if _moving_forward else -1.0)
+	# Update the total time continuously
+	_total_time += delta * movement_speed
 	
-	# Calculate the progress ratio (0.0 to 1.0)
-	var progress = 0.0
-	if _moving_forward:
-		progress = min(_move_timer / move_time, 1.0)
-	else:
-		progress = 1.0 - min(abs(_move_timer) / move_time, 1.0)
+	# Calculate smooth sine wave motion (continuous and never jumps)
+	var sine_factor = sin(_total_time)
 	
-	# Apply smooth interpolation for natural movement
-	# Using smoothstep for easing at endpoints
-	var smooth_progress = smoothstep(0.0, 1.0, progress)
-	global_position = _start_position.lerp(_target_position, smooth_progress)
+	# Apply movement along the direction vector
+	var offset = _movement_direction * movement_vector.length() * movement_amplitude * sine_factor
+	global_position = _center_position + offset
 	
 	# Pulse the emission on the material for visual effect
 	if _material != null:
-		_material.emission_energy = 0.8 + sin(Time.get_ticks_msec() * 0.005) * 0.4
-	
-	# Change direction when reaching endpoints
-	if _moving_forward and _move_timer >= move_time:
-		_moving_forward = false
-	elif not _moving_forward and _move_timer <= -move_time:
-		_moving_forward = true
+		# Sync the glow effect with the movement for natural feel
+		var glow_intensity = 0.8 + abs(sine_factor) * 0.5
+		_material.emission_energy = glow_intensity
 
 # Helper function for smoother interpolation
 func smoothstep(edge0: float, edge1: float, x: float) -> float:
@@ -107,8 +101,13 @@ func create_movement_trail():
 	else:
 		return # Can't create trail without a mesh reference
 	
+	# Calculate the start and end positions for the trail
+	var amplitude = movement_vector.length() * movement_amplitude
+	var start_pos = _center_position - _movement_direction * amplitude - global_position
+	var end_pos = _center_position + _movement_direction * amplitude - global_position
+	
 	# Create indicators along the movement path
-	var num_indicators = 5
+	var num_indicators = 7  # Increased for better visibility
 	for i in range(num_indicators):
 		# Create small sphere indicator
 		var indicator = MeshInstance3D.new()
@@ -117,24 +116,30 @@ func create_movement_trail():
 		sphere.height = 0.3
 		indicator.mesh = sphere
 		
-		# Position along the path
-		var pos_ratio = float(i) / float(num_indicators - 1)
-		# Position indicator slightly below the platform
-		var indicator_pos = _start_position.lerp(_target_position, pos_ratio)
-		indicator_pos.y -= platform_mesh.size.y * 0.5 - 0.1  # Below platform but visible
-		indicator.position = indicator_pos - global_position  # Make relative to platform
+		# Position along the path with cosine distribution for more indicators at the ends
+		var angle = PI * float(i) / float(num_indicators - 1)
+		var pos_ratio = (1.0 - cos(angle)) * 0.5  # Cosine distribution between 0 and 1
 		
-		# Apply material
+		# Position indicator slightly below the platform
+		var indicator_pos = start_pos.lerp(end_pos, pos_ratio)
+		indicator_pos.y = -platform_mesh.size.y * 0.5 - 0.1  # Below platform but visible
+		indicator.position = indicator_pos
+		
+		# Apply material with size variation
 		var indicator_mat = StandardMaterial3D.new()
-		indicator_mat.albedo_color = Color(1.0, 1.0, 0.0, 0.7)
+		indicator_mat.albedo_color = Color(1.0, 0.8, 0.0, 0.8)
 		indicator_mat.emission_enabled = true
-		indicator_mat.emission = Color(1.0, 1.0, 0.0)
+		indicator_mat.emission = Color(1.0, 0.8, 0.0)
 		indicator_mat.emission_energy = 1.0
 		indicator.material_override = indicator_mat
+		
+		# Vary size based on position - larger at endpoints
+		var size_factor = 1.0 + abs(pos_ratio - 0.5) * 1.0
+		indicator.scale = Vector3.ONE * size_factor
 		
 		add_child(indicator)
 		_trail_indicators.append(indicator)
 	
-	# Add arrow at endpoints to indicate direction
-	add_endpoint_arrow(_start_position - global_position)
-	add_endpoint_arrow(_target_position - global_position)
+	# Add arrows at endpoints to indicate direction
+	add_endpoint_arrow(start_pos)
+	add_endpoint_arrow(end_pos)

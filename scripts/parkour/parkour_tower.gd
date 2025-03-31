@@ -126,10 +126,10 @@ func create_slab(size: Vector3, position: Vector3, color: Color, make_moving: bo
 		var move_dir = get_random_movement_direction()
 		var move_distance = platform_movement_distance * (0.8 + 0.4 * rng.randf()) # Randomize slightly, but keep distance large
 		
-		# Set movement parameters - even faster speeds and shorter times for more dramatic movement
+		# Set movement parameters for smooth sine-based movement
 		slab.movement_vector = move_dir * move_distance
-		slab.movement_speed = 2.0 + rng.randf() * 0.5 # Higher speed between 2.0 and 2.5
-		slab.move_time = 0.8 + rng.randf() * 0.4 # Shorter time between 0.8 and 1.2 seconds
+		slab.movement_speed = 1.2 + rng.randf() * 0.8  # Controls frequency - between 1.2 and 2.0
+		slab.movement_amplitude = 0.8 + rng.randf() * 0.4  # Controls distance moved - between 0.8 and 1.2
 	else:
 		# Create a regular static platform
 		slab = StaticBody3D.new()
