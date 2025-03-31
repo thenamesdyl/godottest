@@ -7,6 +7,9 @@ var parkour_tower_scene = preload("res://scenes/parkour/parkour_tower.tscn")
 func _ready():
 	print("Main scene loaded")
 	
+	# Setup input actions for block attachment/detachment
+	setup_input_actions()
+	
 	# Player will be positioned near the parkour tower once it's created
 	# Initial position is just temporary
 	player.position = Vector3(0, 15, 0)
@@ -45,8 +48,43 @@ func add_parkour_tower():
 	# Position player near the tower's base for testing
 	player.position = tower_instance.position + Vector3(5, 10, 5)
 	
+	# Position grabbable objects near the tower
+	reposition_grabbable_objects(tower_instance.position)
+	
 	print("Parkour tower added at position: ", tower_instance.position)
 	print("Player positioned near tower at: ", player.position)
+
+# Reposition grabbable objects near the given position
+func reposition_grabbable_objects(tower_position: Vector3):
+	# Find the grabbable objects container
+	var grabbable_objects = get_node_or_null("GrabbableObjects")
+	if not grabbable_objects:
+		print("Warning: GrabbableObjects node not found")
+		return
+	
+	# Get all grabbable objects
+	var objects = grabbable_objects.get_children()
+	print("Repositioning ", objects.size(), " grabbable objects near tower")
+	
+	# Create a pattern around the tower base
+	for i in range(objects.size()):
+		var object = objects[i]
+		if object is RigidBody3D:
+			# Calculate position in a circle pattern around tower
+			var angle = i * (2.0 * PI / objects.size())
+			var distance = 3.0 # Distance from tower base
+			var x_offset = cos(angle) * distance
+			var z_offset = sin(angle) * distance
+			var height_offset = 2.0 # Height above tower base
+			
+			# Set new position
+			object.global_position = tower_position + Vector3(x_offset, height_offset, z_offset)
+			
+			# Reset physics to avoid residual velocity
+			object.linear_velocity = Vector3.ZERO
+			object.angular_velocity = Vector3.ZERO
+			
+			print("Repositioned object ", object.name, " to ", object.global_position)
 
 # Find a suitable position for the tower on an island
 func find_island_position() -> Vector3:
@@ -83,6 +121,39 @@ func find_island_position() -> Vector3:
 	
 	print("Found island position with elevation: ", best_pos.y)
 	return best_pos
+
+# Setup skybox with the provided image
+# Setup input actions for block attachment/detachment
+func setup_input_actions():
+	# Only add if they don't already exist
+	if not InputMap.has_action("attach_blocks"):
+		# E key for attaching blocks
+		var attach_event = InputEventKey.new()
+		attach_event.keycode = KEY_E
+		InputMap.add_action("attach_blocks")
+		InputMap.action_add_event("attach_blocks", attach_event)
+	
+	if not InputMap.has_action("detach_blocks"):
+		# Q key for detaching blocks
+		var detach_event = InputEventKey.new()
+		detach_event.keycode = KEY_Q
+		InputMap.add_action("detach_blocks")
+		InputMap.action_add_event("detach_blocks", detach_event)
+	
+	# Also ensure the grab/release actions are defined
+	if not InputMap.has_action("grab"):
+		# Left mouse button for grab
+		var grab_event = InputEventMouseButton.new()
+		grab_event.button_index = MOUSE_BUTTON_LEFT
+		InputMap.add_action("grab")
+		InputMap.action_add_event("grab", grab_event)
+	
+	if not InputMap.has_action("release"):
+		# Right mouse button for release
+		var release_event = InputEventMouseButton.new()
+		release_event.button_index = MOUSE_BUTTON_RIGHT
+		InputMap.add_action("release")
+		InputMap.action_add_event("release", release_event)
 
 # Setup skybox with the provided image
 func setup_skybox():

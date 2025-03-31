@@ -4,11 +4,19 @@ extends CharacterBody3D
 const SPEED = 10.0
 const ACCELERATION = 15.0
 const DECELERATION = 20.0
-const JUMP_VELOCITY = 6.0
+const JUMP_VELOCITY = 8.0  # Increased jump height for parkour
+const DOUBLE_JUMP_VELOCITY = 7.0  # Velocity for second jump
+const AIR_CONTROL = 0.7  # How much control player has in air (0-1)
 const MOUSE_SENSITIVITY = 0.002
 
 # Get the gravity from the project settings to be synced with RigidBody nodes
 var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
+
+# Parkour variables
+var can_double_jump = false
+var coyote_time = 0.15  # Time in seconds player can jump after leaving platform
+var coyote_timer = 0.0
+var has_jumped = false
 
 func _ready():
 	# Capture mouse for first-person camera control
@@ -25,6 +33,15 @@ func _input(event):
 	# Press Escape to free the mouse
 	if event.is_action_pressed("ui_cancel"):
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	
+	# Handle attach/detach blocks with E and Q keys
+	if event.is_action_pressed("attach_blocks"):
+		if $GravityGun.has_method("attach_blocks"):
+			$GravityGun.attach_blocks()
+	
+	if event.is_action_pressed("detach_blocks"):
+		if $GravityGun.has_method("detach_blocks"):
+			$GravityGun.detach_blocks()
 
 func _physics_process(delta):
 	# Add gravity
@@ -34,10 +51,26 @@ func _physics_process(delta):
 		# Small adjustment to keep the player grounded
 		velocity.y = -0.1
 
-	# Handle jump with a slightly higher jump
-	if Input.is_action_just_pressed("ui_accept") and is_on_floor():
+	# Handle jumping with advanced parkour features
+	if is_on_floor():
+		can_double_jump = true
+		coyote_timer = coyote_time
+		has_jumped = false
+	else:
+		coyote_timer -= delta
+	
+	# Primary jump (with coyote time)
+	if Input.is_action_just_pressed("ui_accept") and (is_on_floor() or coyote_timer > 0) and not has_jumped:
 		print("Jumping!")
 		velocity.y = JUMP_VELOCITY
+		has_jumped = true
+		coyote_timer = 0
+	
+	# Double jump
+	elif Input.is_action_just_pressed("ui_accept") and can_double_jump and not is_on_floor():
+		print("Double jumping!")
+		velocity.y = DOUBLE_JUMP_VELOCITY
+		can_double_jump = false
 
 	# Get input direction using direct key checks
 	var input_dir = Vector2.ZERO
@@ -62,14 +95,23 @@ func _physics_process(delta):
 	
 	# Handle movement with acceleration and deceleration
 	if direction:
-		# Accelerate towards target velocity
+		# Accelerate towards target velocity with reduced control in air for more skill-based parkour
 		var target_velocity = direction * SPEED
-		velocity.x = move_toward(velocity.x, target_velocity.x, ACCELERATION * delta)
-		velocity.z = move_toward(velocity.z, target_velocity.z, ACCELERATION * delta)
-		print("Current velocity: ", velocity)
+		var current_acceleration = ACCELERATION
+		
+		# Apply air control factor when not on ground
+		if not is_on_floor():
+			current_acceleration *= AIR_CONTROL
+		
+		velocity.x = move_toward(velocity.x, target_velocity.x, current_acceleration * delta)
+		velocity.z = move_toward(velocity.z, target_velocity.z, current_acceleration * delta)
 	else:
-		# Decelerate to zero
-		velocity.x = move_toward(velocity.x, 0, DECELERATION * delta)
-		velocity.z = move_toward(velocity.z, 0, DECELERATION * delta)
+		# Decelerate to zero (also affected by air control)
+		var current_deceleration = DECELERATION
+		if not is_on_floor():
+			current_deceleration *= AIR_CONTROL
+		
+		velocity.x = move_toward(velocity.x, 0, current_deceleration * delta)
+		velocity.z = move_toward(velocity.z, 0, current_deceleration * delta)
 
 	move_and_slide() 
