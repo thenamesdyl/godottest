@@ -18,6 +18,11 @@ var coyote_time = 0.15  # Time in seconds player can jump after leaving platform
 var coyote_timer = 0.0
 var has_jumped = false
 
+# Gravity modification variables
+var gravity_modifier = 1.0  # Default normal gravity (multiplier)
+var gravity_effect_timer = 0.0  # Timer for how long modified gravity lasts
+var gravity_effect_duration = 0.0  # Total duration of gravity effect
+
 func _ready():
 	# Capture mouse for first-person camera control
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -25,6 +30,13 @@ func _ready():
 	# Add self to player group so that other objects can detect the player
 	add_to_group("player")
 	print("Player ready!")
+
+# Method to be called by jump pads to set gravity modifier
+func set_gravity_modifier(modifier: float, duration: float):
+	gravity_modifier = modifier
+	gravity_effect_duration = duration
+	gravity_effect_timer = 0.0
+	print("Gravity modified to: ", modifier, " for ", duration, " seconds")
 
 func _input(event):
 	# Handle mouse movement for camera rotation
@@ -47,12 +59,21 @@ func _input(event):
 			$GravityGun.detach_blocks()
 
 func _physics_process(delta):
-	# Add gravity
+	# Add gravity with modifier support
 	if not is_on_floor():
-		velocity.y -= gravity * delta
+		velocity.y -= gravity * gravity_modifier * delta
 	else:
 		# Small adjustment to keep the player grounded
 		velocity.y = -0.1
+		
+	# Handle gravity effect timer
+	if gravity_modifier != 1.0:
+		gravity_effect_timer += delta
+		if gravity_effect_timer >= gravity_effect_duration:
+			# Reset gravity to normal
+			gravity_modifier = 1.0
+			gravity_effect_timer = 0.0
+			print("Gravity returned to normal")
 
 	# Handle jumping with advanced parkour features
 	if is_on_floor():
@@ -69,11 +90,10 @@ func _physics_process(delta):
 		has_jumped = true
 		coyote_timer = 0
 	
-	# Double jump
-	elif Input.is_action_just_pressed("ui_accept") and can_double_jump and not is_on_floor():
-		print("Double jumping!")
-		velocity.y = DOUBLE_JUMP_VELOCITY
-		can_double_jump = false
+	# Unlimited jumps for testing - always allow jumping in the air
+	elif Input.is_action_just_pressed("ui_accept") and not is_on_floor():
+		print("Space flight mode - jumping again!")
+		velocity.y = DOUBLE_JUMP_VELOCITY  # Use the double jump velocity
 
 	# Get input direction using direct key checks
 	var input_dir = Vector2.ZERO

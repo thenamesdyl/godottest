@@ -7,3 +7,6 @@ script = ExtResource("1_tower")
 tower_height = 100
 vertical_spacing = 2.0
 difficulty_increase_rate = 0.05
+jump_pad_frequency = 5
+glass_platform_frequency = 8
+moving_platforms_ratio = 0.15

@@ -1,0 +1,18 @@
+[gd_scene load_steps=4 format=3 uid="uid://dx3c3npiblfmd"]
+
+[ext_resource type="Script" path="res://scripts/parkour/jump_pad.gd" id="1_jump_pad"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_jump_pad"]
+size = Vector3(1.5, 0.5, 1.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_jump_pad"]
+size = Vector3(1.5, 0.5, 1.5)
+
+[node name="JumpPad" type="StaticBody3D"]
+script = ExtResource("1_jump_pad")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_jump_pad")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_jump_pad")

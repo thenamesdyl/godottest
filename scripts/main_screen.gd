@@ -3,6 +3,7 @@ extends Node3D
 @onready var player = $Player
 @onready var chunk_manager = $ChunkManager
 var parkour_tower_scene = preload("res://scenes/parkour/parkour_tower.tscn")
+var jump_pad_scene = preload("res://scenes/parkour/jump_pad.tscn")
 
 func _ready():
 	print("Main scene loaded")
@@ -24,10 +25,41 @@ func _ready():
 	# Add parkour tower
 	await get_tree().create_timer(0.5).timeout # Wait for terrain to generate
 	add_parkour_tower()
+	
+	# Add a test jump pad at ground level
+	spawn_test_jump_pad()
 
 func _process(_delta):
 	# Process function for any future updates we might need
 	pass 
+
+# Add a test jump pad at ground level for easy testing
+func spawn_test_jump_pad():
+	print("Spawning test jump pad...")
+	
+	# Create instance of the jump pad
+	var jump_pad = jump_pad_scene.instantiate()
+	
+	# Place it at ground level, but slightly ahead of player's initial position
+	# This makes it easier to find
+	var pad_position = Vector3(10, 1, 10)  # X meters ahead of starting position, at ground level
+	
+	# Set jump pad properties (optional - can adjust these for testing)
+	if jump_pad.has_method("set_script_properties"):
+		jump_pad.gravity_modifier = 0.16  # Moon gravity (1/6th Earth gravity)
+		jump_pad.effect_duration = 10.0   # Effect lasts 10 seconds
+		jump_pad.bounce_force = 20.0     # Higher bounce for testing
+	
+	# Position the jump pad
+	jump_pad.position = pad_position
+	
+	# Make it a bit larger for easier testing
+	jump_pad.scale = Vector3(2.0, 1.0, 2.0)
+	
+	# Add to the scene
+	add_child(jump_pad)
+	
+	print("Test jump pad added at ", pad_position)
 
 # Add the parkour tower to the scene at a suitable location
 func add_parkour_tower():

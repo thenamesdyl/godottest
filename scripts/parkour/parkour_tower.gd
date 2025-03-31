@@ -12,8 +12,10 @@ extends Node3D
 @export var moving_platforms_ratio: float = 0.2  # Increased to about 1 out of 5 platforms moving
 @export var platform_movement_distance: float = 3.5  # Increased distance that platforms can move (more dramatic movement)
 @export var glass_platform_frequency: int = 4  # Add a glass platform every X platforms (lower = more frequent)
+@export var jump_pad_frequency: int = 2  # Add many jump pads throughout the tower
 
 var rng = RandomNumberGenerator.new()
+var jump_pads = []  # List to track all jump pads in the scene
 
 func _ready():
 	if tower_seed == 0:
@@ -31,6 +33,9 @@ func generate_tower():
 	base.name = "Base"
 	add_child(base)
 	
+	# Clear jump pads list before generating new tower
+	jump_pads = []
+	
 	# Add glass platforms list to make them easily findable
 	var glass_platforms = []
 	
@@ -39,6 +44,9 @@ func generate_tower():
 	
 	# Generate each level of the tower
 	for i in range(tower_height):
+		# Declare slab variable at the beginning of the loop to avoid scope issues
+		var slab = null
+		
 		# Increase difficulty as we go higher
 		current_difficulty = min(1.0, i * difficulty_increase_rate / tower_height)
 		
@@ -83,38 +91,42 @@ func generate_tower():
 		if is_checkpoint:
 			# Checkpoint platforms are gold-colored
 			slab_color = Color(0.9, 0.7, 0.2)
-		elif platform_type < 2 && add_special_platforms && i > 5:
-			# Moving platforms - bright red colored and actually moving
-			slab_color = Color(1.0, 0.1, 0.1)
-			# Make most red platforms move (higher probability)
-			should_move = rng.randf() < 0.9 && !is_checkpoint
-		elif platform_type < 4 && add_special_platforms && i > 10:
-			# Bouncy platforms - simulated by making them blue
-			slab_color = Color(0.2, 0.2, 0.9)
+			slab = create_slab(slab_size, Vector3(next_x, next_y, next_z), slab_color, false)
+			slab.name = "Checkpoint_" + str(i+1)
+		# Jump pads - about 10% of platforms
+		elif i % jump_pad_frequency == 0 && add_special_platforms:
+			slab = create_jump_pad(slab_size, Vector3(next_x, next_y, next_z))
+			slab.name = "JumpPad_" + str(i+1)
+			# Make them larger and more noticeable
+			slab.scale = Vector3(1.2, 1.0, 1.2)
+			# Make higher jump pads have stronger effects
+			if i > 50:
+				slab.gravity_modifier = 0.12
+				slab.effect_duration = 12.0
+				slab.bounce_force = 25.0
+			jump_pads.append(slab)
+		# Moving platforms - about 15% of non-checkpoint platforms
+		elif !is_checkpoint && rng.randf() < moving_platforms_ratio && add_special_platforms && i > 5:
+			slab_color = Color(1.0, 0.1, 0.1)  # Bright red
+			slab = create_slab(slab_size, Vector3(next_x, next_y, next_z), slab_color, true)
+			slab.name = "MovingSlab_" + str(i+1)
+		# Glass platforms - every 8th platform after level 5
+		elif add_special_platforms && i > 5 && i % glass_platform_frequency == 0:
+			slab = create_glass_slab(slab_size, Vector3(next_x, next_y, next_z))
+			slab.name = "GlassSlab_" + str(i+1)
+			glass_platforms.append(slab)
+		# Standard platforms
 		else:
-			# Standard platforms change from green to red as you climb higher
+			# Gradient from green to red as you climb higher
 			slab_color = Color(
 				lerp(0.2, 0.8, current_difficulty),
 				lerp(0.7, 0.2, current_difficulty),
 				lerp(0.2, 0.2, current_difficulty)
 			)
-		
-		# Check if this should be a glass platform instead (every X platforms)
-		var is_glass = false
-		if add_special_platforms && i > 5 && i % glass_platform_frequency == 0:
-			is_glass = true
-		
-		# Create the slab with appropriate properties
-		var slab
-		if is_glass:
-			slab = create_glass_slab(slab_size, Vector3(next_x, next_y, next_z))
-			slab.name = "GlassSlab_" + str(i+1)
-			glass_platforms.append(slab)
-		else:
-			slab = create_slab(slab_size, Vector3(next_x, next_y, next_z), slab_color, should_move)
+			slab = create_slab(slab_size, Vector3(next_x, next_y, next_z), slab_color, false)
 			slab.name = "Slab_" + str(i+1)
-			if should_move:
-				slab.name = "MovingSlab_" + str(i+1)
+		
+		# Add the platform to the scene
 		add_child(slab)
 		
 		# For checkpoints, add a visible marker
@@ -294,3 +306,26 @@ func add_detection_area(slab: StaticBody3D, platform_size: Vector3):
 	# Add to scene
 	area.add_child(area_collision)
 	slab.add_child(area)
+
+# Jump pads now handle their own detection area setup in their _ready function
+
+# Create a jump pad with moon gravity effect
+func create_jump_pad(size: Vector3, position: Vector3) -> StaticBody3D:
+	# Use the scene instead of creating it programmatically
+	var jump_pad_scene = load("res://scenes/parkour/jump_pad.tscn")
+	var slab = jump_pad_scene.instantiate()
+	slab.transform.origin = position
+	
+	# Scale the jump pad to match the requested size if needed
+	var default_size = Vector3(1.5, 0.5, 1.5)  # Default size from the scene
+	var scale_factor = Vector3(
+		size.x / default_size.x,
+		size.y / default_size.y,
+		size.z / default_size.z
+	)
+	
+	# Apply scaling if necessary
+	if scale_factor != Vector3.ONE:
+		slab.scale = scale_factor
+	
+	return slab
