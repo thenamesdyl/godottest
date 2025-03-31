@@ -21,6 +21,9 @@ var has_jumped = false
 func _ready():
 	# Capture mouse for first-person camera control
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	
+	# Add self to player group so that other objects can detect the player
+	add_to_group("player")
 	print("Player ready!")
 
 func _input(event):

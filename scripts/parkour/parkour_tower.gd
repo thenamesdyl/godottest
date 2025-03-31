@@ -11,6 +11,7 @@ extends Node3D
 @export var add_special_platforms: bool = true  # Whether to add special platform types
 @export var moving_platforms_ratio: float = 0.2  # Increased to about 1 out of 5 platforms moving
 @export var platform_movement_distance: float = 3.5  # Increased distance that platforms can move (more dramatic movement)
+@export var glass_platform_frequency: int = 4  # Add a glass platform every X platforms (lower = more frequent)
 
 var rng = RandomNumberGenerator.new()
 
@@ -29,6 +30,9 @@ func generate_tower():
 	var base = create_slab(base_slab_size * 1.5, Vector3(0, 0, 0), Color(0.3, 0.3, 0.3))
 	base.name = "Base"
 	add_child(base)
+	
+	# Add glass platforms list to make them easily findable
+	var glass_platforms = []
 	
 	var prev_position = Vector3(0, 0, 0)
 	var current_difficulty = 0.0
@@ -95,11 +99,22 @@ func generate_tower():
 				lerp(0.2, 0.2, current_difficulty)
 			)
 		
-		# Create the slab with appropriate properties - pass flag to make it move if needed
-		var slab = create_slab(slab_size, Vector3(next_x, next_y, next_z), slab_color, should_move)
-		slab.name = "Slab_" + str(i+1)
-		if should_move:
-			slab.name = "MovingSlab_" + str(i+1)
+		# Check if this should be a glass platform instead (every X platforms)
+		var is_glass = false
+		if add_special_platforms && i > 5 && i % glass_platform_frequency == 0:
+			is_glass = true
+		
+		# Create the slab with appropriate properties
+		var slab
+		if is_glass:
+			slab = create_glass_slab(slab_size, Vector3(next_x, next_y, next_z))
+			slab.name = "GlassSlab_" + str(i+1)
+			glass_platforms.append(slab)
+		else:
+			slab = create_slab(slab_size, Vector3(next_x, next_y, next_z), slab_color, should_move)
+			slab.name = "Slab_" + str(i+1)
+			if should_move:
+				slab.name = "MovingSlab_" + str(i+1)
 		add_child(slab)
 		
 		# For checkpoints, add a visible marker
@@ -201,18 +216,81 @@ func add_checkpoint_marker(parent_slab: Node3D, level: int):
 	
 	# Add a rotating animation
 	var beacon_material = StandardMaterial3D.new()
+	beacon_material.albedo_color = Color(1.0, 0.8, 0.0)
 	beacon_material.emission_enabled = true
 	beacon_material.emission = Color(1.0, 0.8, 0.0)
 	beacon_material.emission_energy = 2.0
-	beacon.set_surface_override_material(0, beacon_material)
+	beacon.material_override = beacon_material
 	
-	# Add a label showing the checkpoint level
-	var label_3d = Label3D.new()
-	label_3d.text = "Level " + str(level)
-	label_3d.font_size = 24
-	label_3d.position = Vector3(0, 2.5, 0)
-	label_3d.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	
-	# Add to the slab
+	# Add beacon to parent slab
 	parent_slab.add_child(beacon)
-	parent_slab.add_child(label_3d)
+	
+	# Optional: Add level number display
+	var text = "Level " + str(level+1)
+	print("Adding checkpoint marker for ", text)
+
+# Create a glass platform with appropriate properties
+func create_glass_slab(size: Vector3, position: Vector3) -> StaticBody3D:
+	# Create a glass platform using our custom script
+	var script = load("res://scripts/parkour/glass_platform.gd")
+	var slab = StaticBody3D.new()
+	slab.set_script(script)
+	slab.transform.origin = position
+	
+	# Create collision shape
+	var collision = CollisionShape3D.new()
+	var shape = BoxShape3D.new()
+	shape.size = size
+	collision.shape = shape
+	slab.add_child(collision)
+	
+	# Create visual mesh
+	var mesh_instance = MeshInstance3D.new()
+	var box_mesh = BoxMesh.new()
+	box_mesh.size = size
+	mesh_instance.mesh = box_mesh
+	
+	# Apply material with transparency for glass effect
+	var material = StandardMaterial3D.new()
+	material.albedo_color = Color(1.0, 1.0, 1.0, 0.7)  # White, slightly transparent
+	material.metallic = 0.8
+	material.roughness = 0.1
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	
+	# Add slight rim lighting for visibility
+	material.rim_enabled = true
+	material.rim = 0.3
+	material.rim_tint = 0.8
+	
+	mesh_instance.set_surface_override_material(0, material)
+	slab.add_child(mesh_instance)
+	
+	# Add an Area3D to detect when player is on the platform
+	add_detection_area(slab, size)
+	
+	return slab
+
+# Add player detection area to a glass platform
+func add_detection_area(slab: StaticBody3D, platform_size: Vector3):
+	# Create an Area3D slightly above the platform to detect the player
+	var area = Area3D.new()
+	area.name = "DetectionArea"
+	
+	# Create a collision shape for the area
+	var area_collision = CollisionShape3D.new()
+	var area_shape = BoxShape3D.new()
+	
+	# Make detection area slightly smaller than platform and positioned just above it
+	area_shape.size = Vector3(platform_size.x * 0.9, 0.2, platform_size.z * 0.9)
+	area_collision.shape = area_shape
+
+	# Position the area just above the platform
+	area.position = Vector3(0, platform_size.y/2 + 0.1, 0)
+	
+	# Connect signals using Callable to ensure proper connection
+	area.connect("body_entered", Callable(slab, "_on_body_entered"))
+	area.connect("body_exited", Callable(slab, "_on_body_exited"))
+	
+	# Add to scene
+	area.add_child(area_collision)
+	slab.add_child(area)
