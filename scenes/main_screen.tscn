@@ -1,11 +1,17 @@
-[gd_scene load_steps=5 format=3 uid="uid://b48l8qa7u2vtd"]
+[gd_scene load_steps=9 format=3 uid="uid://b48l8qa7u2vtd"]
 
 [ext_resource type="Script" uid="uid://b7a1pupari5ia" path="res://scripts/main_screen.gd" id="1_m4n3r"]
 [ext_resource type="Script" uid="uid://bh4vrmovjmwqd" path="res://scripts/player.gd" id="2_player"]
+[ext_resource type="Script" uid="uid://cwc77lrynt8cp" path="res://scripts/gravity_gun.gd" id="3_gravity"]
+[ext_resource type="Script" uid="uid://dasa6nfqumth8" path="res://scripts/grabbable_object.gd" id="4_grabbable"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_8p4vu"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_kx2yl"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_cube"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_cube"]
 
 [node name="MainScreen" type="Node3D"]
 script = ExtResource("1_m4n3r")
@@ -28,6 +34,44 @@ mesh = SubResource("CapsuleMesh_kx2yl")
 [node name="Camera3D" type="Camera3D" parent="Player"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 
+[node name="GravityGun" type="Node3D" parent="Player"]
+script = ExtResource("3_gravity")
+
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 0, 10, 0)
 shadow_enabled = true
+
+[node name="GrabbableObjects" type="Node3D" parent="."]
+
+[node name="Cube1" type="RigidBody3D" parent="GrabbableObjects"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1, -3)
+mass = 2.0
+script = ExtResource("4_grabbable")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GrabbableObjects/Cube1"]
+shape = SubResource("BoxShape3D_cube")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="GrabbableObjects/Cube1"]
+mesh = SubResource("BoxMesh_cube")
+
+[node name="Cube2" type="RigidBody3D" parent="GrabbableObjects"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1, -2)
+mass = 2.0
+script = ExtResource("4_grabbable")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GrabbableObjects/Cube2"]
+shape = SubResource("BoxShape3D_cube")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="GrabbableObjects/Cube2"]
+mesh = SubResource("BoxMesh_cube")
+
+[node name="Cube3" type="RigidBody3D" parent="GrabbableObjects"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -4)
+mass = 2.0
+script = ExtResource("4_grabbable")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GrabbableObjects/Cube3"]
+shape = SubResource("BoxShape3D_cube")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="GrabbableObjects/Cube3"]
+mesh = SubResource("BoxMesh_cube")
