@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://bisvwcuxuojmi"]
+
+[ext_resource type="Script" path="res://scripts/parkour/parkour_tower.gd" id="1_tower"]
+
+[node name="ParkourTower" type="Node3D"]
+script = ExtResource("1_tower")
+tower_height = 100
+vertical_spacing = 2.0
+difficulty_increase_rate = 0.05
